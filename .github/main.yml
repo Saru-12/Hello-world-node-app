@@ -1,0 +1,45 @@
+name: Continuous Deployment
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '14'
+
+    - name: Install AWS CLI
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y awscli
+
+    - name: Login to Amazon ECR
+      run: |
+        aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 211125589162.dkr.ecr.us-east-1.amazonaws.com
+
+    - name: Build Docker image
+      run: |
+        docker build -t hello-world-app .
+        docker tag hello-world-app:latest 211125589162.dkr.ecr.us-east-1.amazonaws.com/hellow:latest
+
+    - name: Push Docker image to ECR
+      run: |
+        docker push 211125589162.dkr.ecr.us-east-1.amazonaws.com/hellow:latest
+
+    - name: Update ECS service
+      run: |
+        aws ecs update-service --cluster hello-world-cluster --service hello-world-service --force-new-deployment
+      env:
+        AWS_REGION: us-east-1
+        AWS_ACCESS_KEY_ID: ${{ secrets.AKIATCKAQ2SVPI24467D }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.LQSg2fRGNq5aoxUym0IABGJiWvOLVIQine6dnVYq }}
